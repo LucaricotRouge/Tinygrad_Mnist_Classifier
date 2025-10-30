@@ -1,0 +1,10 @@
+# Core
+numpy>=1.25
+tqdm>=4.64
+matplotlib>=3.7
+
+# tinygrad 
+git+https://github.com/tinygrad/tinygrad.git@master
+
+safetensors>=0.3.0 # for safe weight serialization
+
