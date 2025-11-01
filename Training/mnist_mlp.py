@@ -1,20 +1,26 @@
-from enum import Enum
+from enum import Enum # Enum permet de créer des ensembles de valeurs symboliques avec des noms
 from pathlib import Path
-from typing import Callable
+from typing import Callable # type pour annoter les fonctions qu'on passe en paramètres ou qu'on stocke dans des listes
 from tinygrad import Tensor, TinyJit, nn
-from tinygrad.device import Device
+from tinygrad.device import Device # permet de choisir sur quel matériel tourner le calcul (CPU, GPU, WebGPU…)
 from tinygrad.helpers import getenv, trange
+# getenv : lit une variable d’environnement avec une valeur par défaut.
+# trange : comme range mais affiche une barre de progression.
 from tinygrad.nn.datasets import mnist
-from tinygrad.nn.state import get_state_dict, load_state_dict, safe_load, safe_save
-from export_model import export_model
+from tinygrad.nn.state import get_state_dict, load_state_dict, safe_load, safe_save # fonctions pour sauvegarder et charger l’état du modèle (poids et paramètres)
+from export_model import export_model # permet d’exporter le modèle entraîné dans un format utilisable ailleurs (ex: WebGPU ou JS)
 
 import math
+
+import matplotlib.pyplot as plt
+
 
 class SamplingMod(Enum):
   BILINEAR = 0
   NEAREST = 1
 
 def geometric_transform(X: Tensor, angle_deg: Tensor, scale: Tensor, shift_x: Tensor, shift_y: Tensor, sampling: SamplingMod) -> Tensor:
+    
     B, C, H, W = X.shape
 
     angle = angle_deg * math.pi / 180.0
@@ -76,6 +82,7 @@ class Model:
 
   def __call__(self, x:Tensor) -> Tensor: return x.sequential(self.layers)
 
+
 if __name__ == "__main__":
   B = int(getenv("BATCH", 512))
   LR = float(getenv("LR", 0.02))
@@ -94,6 +101,10 @@ if __name__ == "__main__":
   X_train, Y_train, X_test, Y_test = mnist()
   model = Model()
   opt = nn.optim.Muon(nn.state.get_parameters(model))
+
+  loss_history = []
+  accuracy_history = []
+
 
   @TinyJit
   @Tensor.train()
@@ -115,10 +126,13 @@ if __name__ == "__main__":
   test_acc, best_acc, best_since = float('nan'), 0, 0
   for i in (t:=trange(getenv("STEPS", 70))):
     loss = train_step()
+    loss_history.append(loss.item())
 
     if (i % 10 == 9) and (test_acc := get_test_acc().item()) > best_acc:
       best_since = 0
       best_acc = test_acc
+      accuracy_history.append(best_acc)
+
       state_dict = get_state_dict(model)
       safe_save(state_dict, dir_name / f"{model_name}.safetensors")
       continue
@@ -130,6 +144,41 @@ if __name__ == "__main__":
       load_state_dict(model, state_dict)
 
     t.set_description(f"lr: {opt.lr.item():2.2e}  loss: {loss.item():2.2f}  accuracy: {best_acc:2.2f}%")
+
+   
+  hyperparameters_legend = (
+    f"STEPS={getenv('STEPS', 70)}\n"
+    f"BATCH={B}\n"
+    f"LR={LR}\n"
+    f"LR_DECAY={LR_DECAY}\n"
+    f"PATIENCE={PATIENCE}\n"
+    f"ANGLE={ANGLE}\n"
+    f"SCALE={SCALE}\n"
+    f"SHIFT={SHIFT}\n"
+    f"SAMPLING={SAMPLING.name}"
+  )
+
+  plt.figure(figsize=(15, 7))
+
+  plt.subplot(1, 2, 1)
+  plt.plot(loss_history, color="blue")
+  plt.title("Training Loss")
+  plt.xlabel("Steps")
+  plt.ylabel("Loss")
+
+  plt.text(0.95, 0.95, hyperparameters_legend, transform=plt.gca().transAxes,
+         fontsize=10, va='top', ha='right', bbox=dict(facecolor='white', alpha=0.7))
+
+  plt.subplot(1, 2, 2)
+  plt.plot(accuracy_history, color="orange")
+  plt.title("Test Accuracy")
+  plt.xlabel("Steps")
+  plt.ylabel("Accuracy (%)")
+
+  plt.tight_layout()
+  plt.savefig(Path(__file__).parent.parent / "Results"/"training_results.png")
+  plt.show()
+
 
   Device.DEFAULT = "WEBGPU"
   model = Model()
