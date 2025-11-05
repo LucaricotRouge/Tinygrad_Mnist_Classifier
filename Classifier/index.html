@@ -139,11 +139,11 @@
 
       try {
         if (selectedModel === 'MLP') {
-          const { default: mnist_mlp } = await import('./Classifier/mnist_mlp/mnist_mlp.js');
-          model = await mnist_mlp.load(device, './Classifier/mnist_mlp/mnist_mlp.webgpu.safetensors');
+          const { default: mnist_mlp } = await import('./mnist_mlp/mnist_mlp.js');
+          model = await mnist_mlp.load(device, './mnist_mlp/mnist_mlp.webgpu.safetensors');
         } else {
-          const { default: mnist_convnet } = await import('./Classifier/mnist_convnet/mnist_convnet.js');
-          model = await mnist_convnet.load(device, './Classifier/mnist_convnet/mnist_convnet.webgpu.safetensors');
+          const { default: mnist_convnet } = await import('./mnist_convnet/mnist_convnet.js');
+          model = await mnist_convnet.load(device, './mnist_convnet/mnist_convnet.webgpu.safetensors');
         }
         console.log('Model loaded:', selectedModel);
       } catch (err) {

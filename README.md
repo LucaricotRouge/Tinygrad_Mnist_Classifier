@@ -1,7 +1,7 @@
 # TinyGrad MNIST Classifier with WebGPU 
 
 ## 🌐 Live Demo
-[TinyGrad MNIST Classifier Demo](https://lucaricotrouge.github.io/Tinygrad_Mnist_Classifier/)
+[TinyGrad MNIST Classifier Demo](https://lucaricotrouge.github.io/Tinygrad_Mnist_Classifier/Classifier/)
 
 ## Overview
 This project implements a handwritten digit recognition system using TinyGrad for model training and WebGPU for real-time inference in the browser. The application features both an MLP (Multi-Layer Perceptron) and CNN (Convolutional Neural Network) model trained on the MNIST dataset, allowing users to draw digits and receive instant predictions with confidence scores.
