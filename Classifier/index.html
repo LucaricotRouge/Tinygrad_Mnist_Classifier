@@ -128,39 +128,30 @@
     let device = null;
 
   async function initDevice(){
-      if (device) return device;
       const adapter = await navigator.gpu.requestAdapter();
       if (!adapter) { alert('WebGPU not supported'); return null; }
-      device = await adapter.requestDevice();
-      return device;
+      return adapter.requestDevice();
   }
 
-  async function loadModel() {
-      await initDevice();
+  async function loadModel(){
+      if (!device) device = await initDevice();
       if (!device) return;
 
       try {
-          if (selectedModel === 'MLP') {
-              import('./mnist_mlp/mnist_mlp.js').then(async ({ default: mnist_mlp }) => {
-                  const resp = await fetch('./mnist_mlp/mnist_mlp.webgpu.safetensors');
-                  const buffer = await resp.arrayBuffer();
-                  model = await mnist_mlp.load(device, buffer);
-                  console.log('MLP model loaded');
-              }).catch(e => console.error('MLP import/load failed', e));
-          } else {
-              import('./mnist_convnet/mnist_convnet.js').then(async ({ default: mnist_convnet }) => {
-                  const resp = await fetch('./mnist_convnet/mnist_convnet.webgpu.safetensors');
-                  const buffer = await resp.arrayBuffer();
-                  model = await mnist_convnet.load(device, buffer);
-                  console.log('CNN model loaded');
-              }).catch(e => console.error('CNN import/load failed', e));
-          }
+        if (selectedModel === 'MLP') {
+          const { default: mnist_mlp } = await import('./mnist_mlp/mnist_mlp.js');
+          model = await mnist_mlp.load(device, './mnist_mlp/mnist_mlp.webgpu.safetensors');
+        } else {
+          const { default: mnist_convnet } = await import('./mnist_convnet/mnist_convnet.js');
+          model = await mnist_convnet.load(device, './mnist_convnet/mnist_convnet.webgpu.safetensors');
+        }
+        console.log('Model loaded:', selectedModel);
       } catch (err) {
-          console.error('Model load error', err);
-          model = null;
+        console.error('Model import/load failed:', err);
+        model = null;
       }
   }
-  
+
   window.addEventListener('pointerdown', ()=>{ if (!model) loadModel(); }, { once:true });
 
     mlpBtn.addEventListener('click', async() => {
