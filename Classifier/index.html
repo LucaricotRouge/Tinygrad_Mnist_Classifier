@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNIST_Classifier_App</title>
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack.css">
+
+    <style>
+        /* Style global de la page */
+        body {
+        font-family: 'Hack', monospace;
+        background-color: #f8f8f8;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        }
+
+        .panel {
+        border: 2px solid black;
+        background: white;
+        width: 80%;
+        max-width: 600px;
+        min-height: 100px;
+        padding: 15px;
+        }
+
+        #model-selector {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        align-items: center;
+        }
+
+        button {
+        padding: 10px 20px;
+        border: 2px solid black;
+        background: #eee;
+        border-radius: 6px;
+        font-size: 16px;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.2s;
+        }
+
+        button:hover {
+        background: #ddd;
+        }
+
+        button.active {
+        background: #333;
+        color: white;
+        }
+
+        /* Deuxième balise : zone de dessin */
+        #drawing-panel {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        }
+
+        #canvas {
+        border: 1px solid #000;
+        background-color: white;
+        }
+
+        #clear-button {
+        padding: 5px 10px;
+        background: #eee;
+        border: 2px solid #333;
+        border-radius: 2px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: 0.2s;
+        }
+
+        #clear-button:hover {
+        background: #333;
+        color: white;
+        }
+
+        #histogram {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 10px;
+        height: 150px;
+        color: #555;
+        }
+
+  </style>
+</head>
+<body>
+
+  <!-- Balise 1 : choix du modèle -->
+  <div class="panel" id="model-selector">
+    <button id="mlp-btn" class="active">MLP</button>
+    <button id="cnn-btn">CNN</button>
+  </div>
+
+  <!-- Balise 2 : zone de dessin -->
+  <div class="panel" id="drawing-panel">
+    <button id="clear-button">E</button>
+    <canvas id="canvas" width="240" height="240">Draw your number here !</canvas>
+
+  </div>
+
+  <!-- Balise 3 : histogramme de probabilités -->
+  <div class="panel" id="histogram">
+    <p>Histogram</p>
+  </div>
+
+  <script type="module">
+
+    import mnist_mlp from '/mnist_mlp/mnist_mlp.js';
+    import mnist_convnet from './mnist_convnet/mnist_convnet.js';
+
+    const mlpBtn = document.getElementById('mlp-btn');
+    const cnnBtn = document.getElementById('cnn-btn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const clearBtn = document.getElementById('clear-button');
+    const histogram = document.getElementById('histogram');
+    
+    let selectedModel = 'MLP';
+    let model = null;
+    let device = null;
+
+    async function initDevice() {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (!adapter) {
+            alert("WebGPU not supported on this browser.");
+            return;
+        }
+        device = await adapter.requestDevice();
+    }
+
+    initDevice();
+
+    async function loadModel() {
+        if (!device) await initDevice()
+        if (selectedModel === 'MLP') {
+            model = await mnist_mlp.load(device, 'mnist_mlp/mnist_mlp.webgpu.safetensors');
+        } else {
+            model = await mnist_convnet.load(device, 'mnist_convnet/mnist_convnet.webgpu.safetensors');
+        }
+    }
+
+    mlpBtn.addEventListener('click', async() => {
+      selectedModel = 'MLP';
+      mlpBtn.classList.add('active');
+      cnnBtn.classList.remove('active');
+      await loadModel();
+    });
+
+    cnnBtn.addEventListener('click', async() => {
+      selectedModel = 'CNN';
+      cnnBtn.classList.add('active');
+      mlpBtn.classList.remove('active');
+      await loadModel();
+    });
+
+    
+    let drawing = false;
+
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'black';
+
+    function startDraw(e) {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(getX(e), getY(e));
+    }
+
+    function draw(e) {
+      if (!drawing) return;
+      ctx.lineTo(getX(e), getY(e));
+      ctx.stroke();
+    }
+    
+    clearBtn.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    function canvasTo28x28(canvas) {
+
+    const imageCanvas = document.createElement('canvas');
+    imageCanvas.width = 28;
+    imageCanvas.height = 28;
+    const ctx28 = imageCanvas.getContext('2d');
+    ctx28.imageSmoothingEnabled = true;
+
+    ctx28.drawImage(canvas, 0, 0, 28, 28);
+
+    const imgData = ctx28.getImageData(0, 0, 28, 28).data;
+    const modelInput = new Float32Array(28 * 28);
+
+  for (let i = 0; i < 28 * 28; i++) {
+    const alpha = imgData[i * 4 + 3];
+    const v01 = alpha / 255;        
+    modelInput[i] = v01 * 2 - 1;   
+  }
+
+  return modelInput;
+ 
+    }
+
+    function stopDraw() {
+        drawing = false;
+        ctx.closePath();
+
+        (async () => {
+            if (model === null) await loadModel();            
+            const input = canvasTo28x28(canvas); 
+            console.log(input);
+            const [output] = await model(input);  
+            console.log(output);
+            displayHistogram(output);                  
+        })();
+    }
+
+    function getX(e) {
+      return e.offsetX ?? e.touches[0].clientX - canvas.getBoundingClientRect().left;
+    }
+
+    function getY(e) {
+      return e.offsetY ?? e.touches[0].clientY - canvas.getBoundingClientRect().top;
+    }
+
+
+    // Mouse events 
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+
+    // Tactile events
+    canvas.addEventListener('touchstart', startDraw);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDraw);
+
+    function displayHistogram(probabilities) {
+    
+        histogram.innerHTML = ''; // Réinitialise le contenu
+
+        const maxProb = Math.max(...probabilities);
+        const maxIndex = probabilities.indexOf(maxProb);
+
+        for (let i = 0; i < 10; i++) {
+            const container = document.createElement('div');
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'center';
+            container.style.justifyContent = 'flex-end';
+            container.style.width = '24px';
+
+            const bar = document.createElement('div');
+            bar.style.height = `${(probabilities[i] / maxProb) * 100}px`;
+            bar.style.width = '100%';
+            bar.style.background = i === maxIndex ? 'rgb(101, 29, 29)' : '#eee';
+            bar.title = `Chiffre ${i} : ${((probabilities[i]) * 100).toFixed(1)}%`;
+
+            const label = document.createElement('span');
+            label.textContent = i;
+            label.style.marginTop = '5px';
+            label.style.fontSize = '14px';
+            label.style.color = 'black';
+
+            container.appendChild(bar);
+            container.appendChild(label);
+            histogram.appendChild(container);
+        }
+    }
+
+
+  </script>
+</body>
+</html>
