@@ -137,17 +137,42 @@
       if (!device) device = await initDevice();
       if (!device) return;
 
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      console.log('Environment:', {
+          hostname: window.location.hostname,
+          isGitHubPages,
+          pathname: window.location.pathname,
+          href: window.location.href
+      });
+
+      const baseUrl = isGitHubPages ? '/Tinygrad_Mnist_Classifier' : '';
+      
+      const mlpJsPath = `${baseUrl}/mnist_mlp/mnist_mlp.js`;
+      const mlpModelPath = `${baseUrl}/mnist_mlp/mnist_mlp.webgpu.safetensors`;
+      const cnnJsPath = `${baseUrl}/mnist_convnet/mnist_convnet.js`;
+      const cnnModelPath = `${baseUrl}/mnist_convnet/mnist_convnet.webgpu.safetensors`;
+
+      console.log('Loading from paths:', {
+          baseUrl,
+          mlpJs: mlpJsPath,
+          mlpModel: mlpModelPath,
+          cnnJs: cnnJsPath,
+          cnnModel: cnnModelPath
+      });
+
       try {
         if (selectedModel === 'MLP') {
-          const { default: mnist_mlp } = await import('./mnist_mlp/mnist_mlp.js');
-          model = await mnist_mlp.load(device, './mnist_mlp/mnist_mlp.webgpu.safetensors');
+          const { default: mnist_mlp } = await import(mlpJsPath);
+          model = await mnist_mlp.load(device, mlpModelPath);
         } else {
-          const { default: mnist_convnet } = await import('./mnist_convnet/mnist_convnet.js');
-          model = await mnist_convnet.load(device, './mnist_convnet/mnist_convnet.webgpu.safetensors');
+          const { default: mnist_convnet } = await import(cnnJsPath);
+          model = await mnist_convnet.load(device, cnnModelPath);
         }
-        console.log('Model loaded:', selectedModel);
+        console.log('Model loaded successfully:', selectedModel);
       } catch (err) {
         console.error('Model import/load failed:', err);
+        console.error('Error details:', err.message);
+        alert('Failed to load model. Check console for details.');
         model = null;
       }
   }
