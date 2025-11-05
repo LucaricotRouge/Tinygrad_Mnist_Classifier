@@ -1,1 +1,0 @@
-lr: 9.00e-04  loss: 0.18  accuracy: 96.76%

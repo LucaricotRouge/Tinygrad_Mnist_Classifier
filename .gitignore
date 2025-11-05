@@ -1,0 +1,16 @@
+# caches Python
+__pycache__/
+*.pyc
+*.pyo
+
+# virtual env
+.venv/
+env/
+
+
+# logs or checkpoints
+*.log
+*.ckpt
+
+# Results of personal tests
+Results
