@@ -1,22 +1,26 @@
-from enum import Enum
+from enum import Enum # Enum allows creating sets of symbolic values with names
 from pathlib import Path
-from typing import Callable
+from typing import Callable # Type for annotating functions that we pass as parameters or store in lists
 from tinygrad import Tensor, TinyJit, nn
-from tinygrad.device import Device
+from tinygrad.device import Device # Allows choosing which hardware to run computations on (CPU, GPU, WebGPU...)
 from tinygrad.helpers import getenv, trange
+# getenv: reads an environment variable with a default value
+# trange: like range but displays a progress bar
 from tinygrad.nn.datasets import mnist
-from tinygrad.nn.state import get_state_dict, load_state_dict, safe_load, safe_save
-from export_model import export_model
+from tinygrad.nn.state import get_state_dict, load_state_dict, safe_load, safe_save # Functions to save and load model state (weights and parameters)
+from export_model import export_model # Allows exporting the trained model in a format usable elsewhere (e.g., WebGPU or JS)
 
 import math
 
 import matplotlib.pyplot as plt
+
 
 class SamplingMod(Enum):
   BILINEAR = 0
   NEAREST = 1
 
 def geometric_transform(X: Tensor, angle_deg: Tensor, scale: Tensor, shift_x: Tensor, shift_y: Tensor, sampling: SamplingMod) -> Tensor:
+    
     B, C, H, W = X.shape
 
     angle = angle_deg * math.pi / 180.0
@@ -70,16 +74,14 @@ def normalize(X: Tensor) -> Tensor:
 class Model:
   def __init__(self):
     self.layers: list[Callable[[Tensor], Tensor]] = [
-      nn.Conv2d(1, 32, 5), Tensor.silu,
-      nn.Conv2d(32, 32, 5), Tensor.silu,
-      nn.BatchNorm(32), Tensor.max_pool2d,
-      nn.Conv2d(32, 64, 3), Tensor.silu,
-      nn.Conv2d(64, 64, 3), Tensor.silu,
-      nn.BatchNorm(64), Tensor.max_pool2d,
-      lambda x: x.flatten(1), nn.Linear(576, 10),
+      lambda x: x.flatten(1),
+      nn.Linear(784, 512), Tensor.silu,
+      nn.Linear(512, 512), Tensor.silu,
+      nn.Linear(512, 10),
     ]
 
   def __call__(self, x:Tensor) -> Tensor: return x.sequential(self.layers)
+
 
 if __name__ == "__main__":
   B = int(getenv("BATCH", 512))
@@ -103,6 +105,7 @@ if __name__ == "__main__":
   loss_history = []
   accuracy_history = []
 
+
   @TinyJit
   @Tensor.train()
   def train_step() -> Tensor:
@@ -121,10 +124,9 @@ if __name__ == "__main__":
   def get_test_acc() -> Tensor: return (model(normalize(X_test)).argmax(axis=1) == Y_test).mean() * 100
 
   test_acc, best_acc, best_since = float('nan'), 0, 0
-  for i in (t:=trange(getenv("STEPS", 70))):
+  for i in (t:=trange(getenv("STEPS", 100))):
     loss = train_step()
     loss_history.append(loss.item())
-
 
     if (i % 10 == 9) and (test_acc := get_test_acc().item()) > best_acc:
       best_since = 0
@@ -174,7 +176,7 @@ if __name__ == "__main__":
   plt.ylabel("Accuracy (%)")
 
   plt.tight_layout()
-  plt.savefig(Path(__file__).parent.parent / "Results"/"cnn"/"cnn.png")
+  plt.savefig(Path(__file__).parent / "Results"/"mlp"/"mlp.png")
   plt.show()
 
 
