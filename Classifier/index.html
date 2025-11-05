@@ -115,8 +115,13 @@
   </div>
 
   <script type="module">
-
-    import mnist_mlp from '/mnist_mlp/mnist_mlp.js';
+    // Get the base URL for GitHub Pages compatibility
+    const baseUrl = window.location.pathname.includes('github.io') 
+        ? '/Tinygrad_Mnist_Classifier/Classifier'
+        : '';
+    
+    // Use relative paths with baseUrl
+    import mnist_mlp from './mnist_mlp/mnist_mlp.js';
     import mnist_convnet from './mnist_convnet/mnist_convnet.js';
 
     const mlpBtn = document.getElementById('mlp-btn');
@@ -143,10 +148,15 @@
 
     async function loadModel() {
         if (!device) await initDevice()
+        const modelPath = selectedModel === 'MLP'
+            ? `${baseUrl}/mnist_mlp/mnist_mlp.webgpu.safetensors`
+            : `${baseUrl}/mnist_convnet/mnist_convnet.webgpu.safetensors`;
+        
+        console.log(`Loading model from: ${modelPath}`);
         if (selectedModel === 'MLP') {
-            model = await mnist_mlp.load(device, 'mnist_mlp/mnist_mlp.webgpu.safetensors');
+            model = await mnist_mlp.load(device, modelPath);
         } else {
-            model = await mnist_convnet.load(device, 'mnist_convnet/mnist_convnet.webgpu.safetensors');
+            model = await mnist_convnet.load(device, modelPath);
         }
     }
 
