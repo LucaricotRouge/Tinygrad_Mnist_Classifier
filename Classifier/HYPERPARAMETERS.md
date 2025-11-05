@@ -40,36 +40,6 @@ Le résultat est à nouveau plus correct
 ![mlp7](../Results/mlp/mlp7.png)
 lr: 2.50e-02  loss: 0.27  accuracy: 96.07%
 
- 
-![mlp8](../Results/mlp/mlp8.png)
-lr: 5.31e-04  loss: 1.13  accuracy: 80.38%
-
- On peut supposer que le paramètre d'ANGLE a une influence importante sur la compréhension du modèle sur les chiffres car un angle trop aléatoire ne permettrait pas d'apprendre réellement les caractéristiques des chiffres ce qui pourrait causé des confusions entre un 1 et un 7 par exemple. On constate également qu'un LR de 0.01 a dû mal à converger et diminuer rapidement. Par ailleurs changer le SCALE en 0.3 et le SHIFT en 0.2 permet une meilleure performance en test même si le dessin n'est pas très bien centrée sur le canva tout en ne baissant que peu l'accuracy voire en ne la changeant pas du tout.   
-
-![mlp9](../Results/mlp/mlp9.png)
-lr: 7.29e-04  loss: 0.77  accuracy: 88.72%
-
-En baissant l'ANGLE de 10 on obtient 8% de plus en accuracy, ce qui va dans le sens de l'hypothèse précédente. 
-
-![mlp10](../Results/mlp/mlp10.png)
-lr: 8.86e-05  loss: 1.47  accuracy: 66.68%
-
-L'allure des courbes montre une croissance exponentielle dès le début ce qui montre que le modèle apprend vite mais les performances sont limitées... On va essayer de revenir à une LR qui n'était pas mauvaise de 0.02 ou 0.01 mais avec une PATIENCE moindre pour diminuer LR plus rapidement et maintenit LR_DECAY à sa valeur initiale. 
-
-![mlp11](../Results/mlp/mlp11.png)
-lr: 4.30e-04  loss: 1.20  accuracy: 80.25%
-
-Les meilleurs résultats provenaient des mlp avec un LR de 0.001. Nous allons tenter de commencer l'entrainement avec un LR de 0.001 afin de faire évoluer les poids plus lentement étant donné la stabilisation rapide du modèle. Pour compenser cette faible LR du début nous allons augmenter légèrement le LR_DECAY à 0.95. 
-
-![mlp12](../Results/mlp/mlp12.png)
-lr: 7.74e-04  loss: 0.50  accuracy: 93.06%
-
-Le résultat est plus satisfaisant, testons avec un STEPS plus grand pour gratter les derniers pourcentages d'accuracy. 
-
-![mlp13](../Results/mlp/mlp13.png)
-lr: 5.40e-04  loss: 0.26  accuracy: 95.27%
-
-L'accuray et la loss sont satisfaisants et les résultats en test sont plus adaptés à différentes configurations de dessin. 
 
 
 ### CNN Model : 
@@ -89,7 +59,14 @@ lr: 1.00e-03  loss: 1.03  accuracy: 89.41%
 
 La diminution du LR a permis un pique d'apprentissage plus important par un ajustement des poids moins brutals mais la loss et l'accuracy ne change quasiment pas. 
 
+![cnn5](../Results/cnn/cnn5.png)
+1.00e-03  loss: 0.34  accuracy: 95.93%
 
-cnn5: lr: 1.00e-03  loss: 0.34  accuracy: 95.93%
-cnn6: lr: 1.00e-03  loss: 0.45  accuracy: 93.31%
-cnn7: lr: 1.00e-03  loss: 0.51  accuracy: 93.34%
+![cnn6](../Results/cnn/cnn6.png)
+lr: 1.00e-03  loss: 0.45  accuracy: 93.31%
+
+![cnn7](../Results/cnn/cnn7.png)
+lr: 1.00e-03  loss: 0.51  accuracy: 93.34%
+
+![cnn8](../Results/cnn/cnn8.png)
+lr: 1.27e-02  loss: 0.07  accuracy: 98.95%
