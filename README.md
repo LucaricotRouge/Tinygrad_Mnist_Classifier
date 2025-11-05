@@ -1,7 +1,5 @@
 # TinyGrad MNIST Classifier with WebGPU 
 
-![App Screenshot](Results/MnistApp.png)
-
 ## 🌐 Live Demo
 [TinyGrad MNIST Classifier Demo](https://lucaricotrouge.github.io/Tinygrad_Mnist_Classifier/)
 
