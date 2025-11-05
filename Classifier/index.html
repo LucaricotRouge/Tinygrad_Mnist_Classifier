@@ -115,13 +115,8 @@
   </div>
 
   <script type="module">
-    // Get the base URL for GitHub Pages compatibility
-    const baseUrl = window.location.pathname.includes('github.io') 
-        ? '/Tinygrad_Mnist_Classifier/Classifier'
-        : '';
-    
-    // Use relative paths with baseUrl
-    import mnist_mlp from './mnist_mlp/mnist_mlp.js';
+
+    import mnist_mlp from '/mnist_mlp/mnist_mlp.js';
     import mnist_convnet from './mnist_convnet/mnist_convnet.js';
 
     const mlpBtn = document.getElementById('mlp-btn');
@@ -135,30 +130,32 @@
     let model = null;
     let device = null;
 
-    async function initDevice() {
-        const adapter = await navigator.gpu.requestAdapter();
-        if (!adapter) {
-            alert("WebGPU not supported on this browser.");
-            return;
-        }
-        device = await adapter.requestDevice();
-    }
+  async function initDevice(){
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) { alert('WebGPU not supported'); return null; }
+    return adapter.requestDevice();
+  }
 
-    initDevice();
+  async function loadModel(){
+    if (!device) device = await initDevice();
+    if (!device) return;
 
-    async function loadModel() {
-        if (!device) await initDevice()
-        const modelPath = selectedModel === 'MLP'
-            ? `${baseUrl}/mnist_mlp/mnist_mlp.webgpu.safetensors`
-            : `${baseUrl}/mnist_convnet/mnist_convnet.webgpu.safetensors`;
-        
-        console.log(`Loading model from: ${modelPath}`);
-        if (selectedModel === 'MLP') {
-            model = await mnist_mlp.load(device, modelPath);
-        } else {
-            model = await mnist_convnet.load(device, modelPath);
-        }
+    try {
+      if (selectedModel === 'MLP') {
+        const { default: mnist_mlp } = await import('./mnist_mlp/mnist_mlp.js');
+        model = await mnist_mlp.load(device, './mnist_mlp/mnist_mlp.webgpu.safetensors');
+      } else {
+        const { default: mnist_convnet } = await import('./mnist_convnet/mnist_convnet.js');
+        model = await mnist_convnet.load(device, './mnist_convnet/mnist_convnet.webgpu.safetensors');
+      }
+      console.log('Model loaded:', selectedModel);
+    } catch (err) {
+      console.error('Model import/load failed:', err);
+      model = null; // keep drawing working even if model fails
     }
+  }
+
+  window.addEventListener('pointerdown', ()=>{ if (!model) loadModel(); }, { once:true });
 
     mlpBtn.addEventListener('click', async() => {
       selectedModel = 'MLP';
@@ -253,38 +250,42 @@
     canvas.addEventListener('touchmove', draw);
     canvas.addEventListener('touchend', stopDraw);
 
-    function displayHistogram(probabilities) {
-    
-        histogram.innerHTML = ''; // Réinitialise le contenu
+function displayHistogram(logits) {
+    histogram.innerHTML = ''; 
 
-        const maxProb = Math.max(...probabilities);
-        const maxIndex = probabilities.indexOf(maxProb);
+    const expVals = logits.map(x => Math.exp(x));
+    const sumExp = expVals.reduce((a, b) => a + b, 0);
+    const probabilities = expVals.map(x => x / sumExp);
 
-        for (let i = 0; i < 10; i++) {
-            const container = document.createElement('div');
-            container.style.display = 'flex';
-            container.style.flexDirection = 'column';
-            container.style.alignItems = 'center';
-            container.style.justifyContent = 'flex-end';
-            container.style.width = '24px';
+    const maxProb = Math.max(...probabilities);
+    const maxIndex = probabilities.indexOf(maxProb);
 
-            const bar = document.createElement('div');
-            bar.style.height = `${(probabilities[i] / maxProb) * 100}px`;
-            bar.style.width = '100%';
-            bar.style.background = i === maxIndex ? 'rgb(101, 29, 29)' : '#eee';
-            bar.title = `Chiffre ${i} : ${((probabilities[i]) * 100).toFixed(1)}%`;
+    for (let i = 0; i < 10; i++) {
+        const container = document.createElement('div');
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'flex-end';
+        container.style.width = '24px';
 
-            const label = document.createElement('span');
-            label.textContent = i;
-            label.style.marginTop = '5px';
-            label.style.fontSize = '14px';
-            label.style.color = 'black';
+        const bar = document.createElement('div');
+        bar.style.height = `${probabilities[i] * 100}px`; 
+        bar.style.width = '100%';
+        bar.style.background = i === maxIndex ? 'rgb(101, 29, 29)' : '#eee';
+        bar.title = `Chiffre ${i} : ${(probabilities[i] * 100).toFixed(1)}%`;
 
-            container.appendChild(bar);
-            container.appendChild(label);
-            histogram.appendChild(container);
-        }
+        const label = document.createElement('span');
+        label.textContent = i;
+        label.style.marginTop = '5px';
+        label.style.fontSize = '14px';
+        label.style.color = 'black';
+
+        container.appendChild(bar);
+        container.appendChild(label);
+        histogram.appendChild(container);
     }
+}
+
 
 
   </script>
