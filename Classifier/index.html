@@ -128,28 +128,28 @@
     let device = null;
 
   async function initDevice(){
-    const adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) { alert('WebGPU not supported'); return null; }
-    return adapter.requestDevice();
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) { alert('WebGPU not supported'); return null; }
+      return adapter.requestDevice();
   }
 
   async function loadModel(){
-    if (!device) device = await initDevice();
-    if (!device) return;
+      if (!device) device = await initDevice();
+      if (!device) return;
 
-    try {
-      if (selectedModel === 'MLP') {
-        const { default: mnist_mlp } = await import('./mnist_mlp/mnist_mlp.js');
-        model = await mnist_mlp.load(device, './mnist_mlp/mnist_mlp.webgpu.safetensors');
-      } else {
-        const { default: mnist_convnet } = await import('./mnist_convnet/mnist_convnet.js');
-        model = await mnist_convnet.load(device, './mnist_convnet/mnist_convnet.webgpu.safetensors');
+      try {
+        if (selectedModel === 'MLP') {
+          const { default: mnist_mlp } = await import('./mnist_mlp/mnist_mlp.js');
+          model = await mnist_mlp.load(device, './mnist_mlp/mnist_mlp.webgpu.safetensors');
+        } else {
+          const { default: mnist_convnet } = await import('./mnist_convnet/mnist_convnet.js');
+          model = await mnist_convnet.load(device, './mnist_convnet/mnist_convnet.webgpu.safetensors');
+        }
+        console.log('Model loaded:', selectedModel);
+      } catch (err) {
+        console.error('Model import/load failed:', err);
+        model = null;
       }
-      console.log('Model loaded:', selectedModel);
-    } catch (err) {
-      console.error('Model import/load failed:', err);
-      model = null; // keep drawing working even if model fails
-    }
   }
 
   window.addEventListener('pointerdown', ()=>{ if (!model) loadModel(); }, { once:true });
